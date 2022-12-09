@@ -1,0 +1,39 @@
+# numero de cores
+cores=4
+# potencia en watios base procesador (float)
+wbase=20
+# potencia en watios core inactivo (float)
+wcoreinactivo=1.2
+# constante de C por core (float)
+coreC=2.5
+# frecuencias trabajo core (float)
+frecuencias=3.006;2.672;2.338;2.004;1.888;1.779
+# voltajes trabajo core (float)
+voltajes=1.28;1.224;1.16;1.104;1.08;1.056
+####### PARTE 1 #############################
+# duraccion en segundos aplicación secuencial (float)
+tiempo_secuencial=1200.0
+# p estado secuencial de referencia (int)
+pestado=0
+# indice de paralelizacion (int)
+grado_paralelizacion=3
+# distribución de paralelizacion en % (float)
+division_trabajo=25; 25; 50
+####### PARTE 2 #############################
+# duraccion en segundos aplicación secuencial (float)
+tiempo_secuencial=2300.0
+# p estado secuencial de referencia (int)
+pestado=0
+# indice de paralelizacion (int)
+grado_paralelizacion=4
+# distribución de paralelizacion en % (float)
+division_trabajo=15; 25; 25; 35
+####### PARTE 3 #############################
+# duraccion en segundos aplicación secuencial (float)
+tiempo_secuencial=1100.0
+# p estado secuencial de referencia (int)
+pestado=0
+# indice de paralelizacion (int)
+grado_paralelizacion=3
+# distribución de paralelizacion en % (float)
+division_trabajo=30; 30; 40
