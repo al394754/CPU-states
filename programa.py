@@ -37,17 +37,9 @@ def calcula_tiempo(estados: List[int], tiempo_secuencial: float, grado_paraleliz
     for i in range(grado_paralelizacion):
         tiempos_iniciales.append(float(format((tiempo_secuencial * division_trabajo[i] / 100), ".2f")))
     tiempos: List[float] = []
-    ind = 0
-    while ind < len(division_trabajo):
-        tiempo = frecuencias[0] / frecuencias[estados[ind]] * tiempos_iniciales[ind]
-        #tiempo = round(tiempo, 4)
-        #ultimo_dig = int(repr(tiempo)[-1]) 
-        #if(ultimo_dig == 5):
-         #   tiempo += 0.001 #esto es porque el round cuando acaba en 5 tiende al par, por lo que .365 irá hacia .360 antes que .670
-        #tiempo = round(tiempo, 2)
-        #tiempo = round(tiempo, 3)
+    for i in range(grado_paralelizacion):
+        tiempo = frecuencias[0] / frecuencias[estados[i]] * tiempos_iniciales[i]
         tiempos.append(tiempo)
-        ind += 1
     return tiempos    
 
 def arreglar_tiempos(tiempos: List[float]):
@@ -63,17 +55,15 @@ def arreglar_tiempos(tiempos: List[float]):
 
 def calcula_potencia(coreC: float, frecuencias: List[float], voltajes: List[float]): #Calcula cada potencia activa de los estados posibles 
     potencias: List[float] = []
-    ind = 0
-    while ind <= 5:
+    for ind in range(len(voltajes)):
         potencias.append(round((1.2 + coreC * frecuencias[ind] * voltajes[ind]**2), 6))
-        ind = ind + 1
     return potencias
 
-def process(cores: int, wbase: float, wcoreinactivo: float, coreC: float, frecuencias: List[float], voltajes: List[float], tiempo_secuencial: float, pestado: int, grado_paralelizacion: int, division_trabajo: List[int]):
+def process(cores: int, wbase: float, wcoreinactivo: float, coreC: float, frecuencias: List[float], voltajes: List[float], tiempo_secuencial: float, pestado: int, grado_paralelizacion: int, division_trabajo: List[int], parte: int):
     estados_por_consumo: List[int] = [] #estados ordenados por consumo según el tiempo de ejecución
     minimo_consumo = 0
-    cadena_minima: str = ""
-    for i in range(cores):
+    lista_minima = []
+    for i in range(grado_paralelizacion):
         estados_por_consumo.append(0)
     estados = []
     
@@ -83,7 +73,7 @@ def process(cores: int, wbase: float, wcoreinactivo: float, coreC: float, frecue
         print("P-estado", str(i)+":", "V="+str(format((voltajes[i]), ".6f"))+",", "f="+str(format((frecuencias[i]), ".6f")))
     
     print("")
-    print("##### Parte: 1")
+    print("##### Parte: ", parte+1)
     print("T sec\t"," =", format((tiempo_secuencial), ".2f"))
     print("P estado ","=", pestado)
     for i in range(grado_paralelizacion):
@@ -91,24 +81,20 @@ def process(cores: int, wbase: float, wcoreinactivo: float, coreC: float, frecue
         
     
     print("")
-    print("##### Parte: 1")
-    minimo_consumo, cadena_minima = calculo_recursivo(estados, voltajes, frecuencias, cores, estados_por_consumo, minimo_consumo, cadena_minima)
+    print("##### Parte: ", parte+1)
+    minimo_consumo, lista_minima = calculo_recursivo(estados, voltajes, frecuencias, cores, estados_por_consumo, minimo_consumo, lista_minima)
     
-    print("")
-    print("Configuracion para consumo minimo:")
-    print("##### Parte: 1")
-    print(" ".join(cadena_minima))
-    print("")
-    print("Consumo total minimo:", str(format(minimo_consumo, ".6f")),"kWh")
+    return lista_minima, minimo_consumo
+
       
-def calculo_recursivo(estados: List[int], voltajes: List[float], frecuencias: List[float], cores: int, estados_por_consumo: List[int], minimo_consumo: float, cadena_minima: str): #Alternativa a crear tantos bucles for por cantidad de nucleos
+def calculo_recursivo(estados: List[int], voltajes: List[float], frecuencias: List[float], cores: int, estados_por_consumo: List[int], minimo_consumo: float, lista_minima): #Alternativa a crear tantos bucles for por cantidad de nucleos
     total = 0
     
     estados.append(0)
     for i in range(0, len(voltajes)):
         estados[len(estados) - 1] = i #modificamos únicamente el último valor
         if (len(estados) < len(division_trabajo)):
-            minimo_consumo, cadena_minima = calculo_recursivo(estados, voltajes, frecuencias, cores, estados_por_consumo, minimo_consumo, cadena_minima)
+            minimo_consumo, lista_minima = calculo_recursivo(estados, voltajes, frecuencias, cores, estados_por_consumo, minimo_consumo, lista_minima)
                   
         else: #Solo se ejecuta cuando tenemos una combinación entera de estados
             tiempos = calcula_tiempo(estados, tiempo_secuencial, grado_paralelizacion, division_trabajo)
@@ -133,33 +119,59 @@ def calculo_recursivo(estados: List[int], voltajes: List[float], frecuencias: Li
             total = float(format(total / 1000 / 3600, ".6f"))
             
             tiempos = arreglar_tiempos(tiempos)
-            cadena = ""
+            lista_salida = []
             for i in range(cores):
                 if (i < len(estados)):
-                    cadena = cadena, "P"+str(estados[i])
+                    lista_salida.append("P"+str(estados[i])) 
                 else:
-                    cadena = cadena, "--"
-            cadena = cadena,  " : "
+                    lista_salida.append("--")
+            lista_salida.append(" : ")
             for i in range(cores):
                 if (i < len(estados)):
-                    cadena = cadena, format(tiempos[i], "7.2f"), ""
+                    lista_salida.append(format(tiempos[i], "7.2f"))
+                    lista_salida.append("")
                 else:
-                    cadena = cadena,  "0.00", ""
-            cadena = cadena, " tmax =", format(max(tiempos), "7.2f"), " Energia=", str(format(total, ".6f")), "kWh"
+                    lista_salida.append(format(0.00, "7.2f"))
+                    lista_salida.append("")
+            #cadena = cadena, " tmax =", format(max(tiempos), "7.2f"), " Energia=", str(format(total, ".6f")), "kWh"
+            lista_salida.append("tmax =")
+            lista_salida.append(format(max(tiempos), "7.2f"))
+            lista_salida.append(" Energia=")
+            lista_salida.append(str(format(total, ".6f")))
+            lista_salida.append("kWh")
+
             if (minimo_consumo == 0 or minimo_consumo > total):
                 minimo_consumo = total
-                cadena_minima = cadena
-            print(" ".join(cadena))
+                lista_minima = lista_salida
+            for i in range(len(lista_salida)):
+                print(lista_salida[i], end=" ")
+            print("")
     estados.pop() #Para evitar que al subir en recursividad, la lista esté ya con el máximo de elementos       
-    return minimo_consumo, cadena_minima
+    return minimo_consumo, lista_minima
         
+def mostrar_resultado_final(consumo_total:int, lista_partes):
+    print("")
+    print("Configuracion para consumo minimo:")
+    for i in range(len(lista_partes)):
+        print("##### Parte:", i+1)
+        for j in range(len(lista_partes[i])):
+            print(lista_partes[i][j], end=" ")
+        print("")
+    print("")
+    print("Consumo total minimo:", str(format(consumo_total, ".6f")),"kWh")
 
 if __name__ == "__main__":
     listado = read_data(sys.stdin)
     #cores, wbase, wcoreinactivo, coreC, frecuencias, voltajes, tiempo_secuencial, pestado, grado_paralelizacion, division_trabajo = procesar_datos(listado)
     cores, wbase, wcoreinactivo, coreC, frecuencias, voltajes, cant_partes = procesar_datos(listado)
+    lista_partes = []
+    consumo_total = 0
+    lista = []
+    consumo = 0
     for i in range(int(cant_partes)):
-        print(i)
         tiempo_secuencial, pestado, grado_paralelizacion, division_trabajo = procesar_partes(listado, i)
-        process(cores, wbase, wcoreinactivo, coreC, frecuencias, voltajes, tiempo_secuencial, pestado, grado_paralelizacion, division_trabajo)
+        lista, consumo = process(cores, wbase, wcoreinactivo, coreC, frecuencias, voltajes, tiempo_secuencial, pestado, grado_paralelizacion, division_trabajo, i)
+        consumo_total += consumo
+        lista_partes.append(lista)
+    mostrar_resultado_final(consumo_total, lista_partes)
     
