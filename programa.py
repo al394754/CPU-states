@@ -59,7 +59,7 @@ def calcula_potencia(coreC: float, frecuencias: List[float], voltajes: List[floa
         potencias.append(round((1.2 + coreC * frecuencias[ind] * voltajes[ind]**2), 6))
     return potencias
 
-def process(cores: int, wbase: float, wcoreinactivo: float, coreC: float, frecuencias: List[float], voltajes: List[float], tiempo_secuencial: float, pestado: int, grado_paralelizacion: int, division_trabajo: List[int], parte: int):
+def process(cores: int, wbase: float, wcoreinactivo: float, coreC: float, frecuencias: List[float], voltajes: List[float], tiempo_secuencial: float, pestado: int, grado_paralelizacion: int, division_trabajo: List[int], parte: int, cant_partes: int):
     estados_por_consumo: List[int] = [] #estados ordenados por consumo según el tiempo de ejecución
     minimo_consumo = 0
     lista_minima = []
@@ -67,21 +67,18 @@ def process(cores: int, wbase: float, wcoreinactivo: float, coreC: float, frecue
         estados_por_consumo.append(0)
     estados = []
     
-    print("cores =", cores)
-    print("P-states")
-    for i in range(len(voltajes)):
-        print("P-estado", str(i)+":", "V="+str(format((voltajes[i]), ".6f"))+",", "f="+str(format((frecuencias[i]), ".6f")))
-    
-    print("")
-    print("##### Parte: ", parte+1)
-    print("T sec\t"," =", format((tiempo_secuencial), ".2f"))
-    print("P estado ","=", pestado)
-    for i in range(grado_paralelizacion):
-        print("particion "+str(i)+": trabajo = "+str(division_trabajo[i]))
+    if (parte == 0):
+        print("cores =", cores)
+        print("P-states")
+        for i in range(len(voltajes)):
+            print("P-estado", str(i)+":", "V="+str(format((voltajes[i]), ".6f"))+",", "f="+str(format((frecuencias[i]), ".6f"))) 
+        print("")
         
+        mostrar_datos_partes(cant_partes)
     
-    print("")
-    print("##### Parte: ", parte+1)
+    else: #Else unicamente para cuadrar líneas en blanco con solucion
+        print("")
+    print("##### Parte:", parte+1)
     minimo_consumo, lista_minima = calculo_recursivo(estados, voltajes, frecuencias, cores, estados_por_consumo, minimo_consumo, lista_minima)
     
     return lista_minima, minimo_consumo
@@ -104,7 +101,7 @@ def calculo_recursivo(estados: List[int], voltajes: List[float], frecuencias: Li
                 estados_por_consumo[i] = estados[ind_tiempos_ordenados[i]]
             
             ind = 0
-            cant_nucleos_parados = 0   
+            cant_nucleos_parados = cores - len(division_trabajo)  
             while ind < len(division_trabajo):
                 potencia_combinada = 0
                 for i in range(ind, len(estados_por_consumo)):
@@ -159,6 +156,16 @@ def mostrar_resultado_final(consumo_total:int, lista_partes):
         print("")
     print("")
     print("Consumo total minimo:", str(format(consumo_total, ".6f")),"kWh")
+    
+def mostrar_datos_partes(cant_partes):
+    for parte in range(int(cant_partes)):
+        tiempo_secuencial, pestado, grado_paralelizacion, division_trabajo = procesar_partes(listado, parte)
+        print("##### Parte:", parte+1)
+        print("T sec    ","=", format((tiempo_secuencial), ".2f"))
+        print("P estado ","=", pestado)
+        for i in range(grado_paralelizacion):
+            print("particion "+str(i)+": trabajo = "+str(division_trabajo[i]))
+        print("")
 
 if __name__ == "__main__":
     listado = read_data(sys.stdin)
@@ -170,7 +177,7 @@ if __name__ == "__main__":
     consumo = 0
     for i in range(int(cant_partes)):
         tiempo_secuencial, pestado, grado_paralelizacion, division_trabajo = procesar_partes(listado, i)
-        lista, consumo = process(cores, wbase, wcoreinactivo, coreC, frecuencias, voltajes, tiempo_secuencial, pestado, grado_paralelizacion, division_trabajo, i)
+        lista, consumo = process(cores, wbase, wcoreinactivo, coreC, frecuencias, voltajes, tiempo_secuencial, pestado, grado_paralelizacion, division_trabajo, i, cant_partes)
         consumo_total += consumo
         lista_partes.append(lista)
     mostrar_resultado_final(consumo_total, lista_partes)
